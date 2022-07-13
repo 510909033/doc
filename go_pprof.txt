@@ -1,0 +1,13 @@
+
+go tool pprof -http=:6061 http://localhost:6061/debug/pprof/heap
+http://localhost:6061/debug/charts
+
+go tool pprof http://localhost:6060/debug/pprof/heap
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+go tool pprof http://localhost:6060/debug/pprof/block
+go tool pprof http://localhost:6060/debug/pprof/mutex
+
+wget -O trace.out http://localhost:6060/debug/pprof/trace?seconds=5
+go tool trace trace.out
+
+浏览器：http://localhost:6060/debug/pprof/
