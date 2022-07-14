@@ -1,0 +1,63 @@
+Mysql8 和mysql 5.7 的区别
+https://blog.csdn.net/u011334954/article/details/108240173
+
+1. NoSql存储
+Mysql从5.7 版本提供了NoSQL的存储功能,在8.0中这部分得到一些修改,不过这个在实际中用的极少
+
+2.隐藏索引
+隐藏索引的特性对于性能调试非常有用,在8.0 中,索引可以被隐藏和显示,当一个索引隐藏时,他不会被查询优化器所使用
+在这里插入图片描述
+也就是说可以隐藏一个索引,然后观察对数据库的影响.如果性能下降,就说明这个索引是有效的,于是将其”恢复显示”即可;如果数据库性能看不出变化,说明这个索引是多于的,可以删掉了
+
+隐藏一个索引的语法
+    ALTER TABLE t ALTER INDEX i INVISIBLE;
+
+恢复显示该索引的语法是：
+	ALTER TABLE t ALTER INDEX i VISIBLE;
+
+当一个索引被隐藏时,我们可以从show index命令的输出汇总看出,该索引visible属性值为No
+
+**注意:**当索引被隐藏时,他的内容仍然是和正常索引一样实时更新的,这个特性本身是专门为了优化调试而使用的,
+如果你长期隐藏一个索引,那还不如干掉,因为索引的存在会影响数据的插入\更新和删除功能
+
+3.设置持久化
+MySQL 的设置可以在运行时通过 SET GLOBAL 命令来更改，但是这种更改只会临时生效，到下次启动时数据库又会从配置文件中读取。
+MySQL 8 新增了 SET PERSIST 命令，例如：
+SET PERSIST max_connections = 500;
+MySQL 会将该命令的配置保存到数据目录下的 mysqld-auto.cnf 文件中，下次启动时会读取该文件，用其中的配置来覆盖缺省的配置文件。
+
+4.UTF-8 编码
+从 MySQL 8 开始，数据库的缺省编码将改为 utf8mb4，这个编码包含了所有 emoji 字符。
+多少年来我们使用 MySQL 都要在编码方面小心翼翼，生怕忘了将缺省的 latin 改掉而出现乱码问题。从此以后就不用担心了。
+
+5.通用表表达式（Common Table Expressions）
+复杂的查询会使用嵌入式表，例如：
+
+SELECT t1.*, t2.* FROM
+	 (SELECT col1 FROM table1) t1,
+	 (SELECT col2 FROM table2) t2;
+而有了 CTE，我们可以这样写：
+
+	WITH
+	 t1 AS (SELECT col1 FROM table1),
+	 t2 AS (SELECT col2 FROM table2)
+	SELECT t1.*, t2.*
+	FROM t1, t2;
+这样看上去层次和区域都更加分明，改起来也更清晰的知道要改哪一部分。
+这个特性在很多报表场景是很有用的，也是mysql优化的一个很重要特性。
+
+6. 窗口函数（Window Functions）
+MySQL 被吐槽最多的特性之一就是缺少 rank() 函数，当需要在查询当中实现排名时，
+必须手写 @ 变量。但是从 8.0 开始，MySQL 新增了一个叫窗口函数的概念，它可以用来实现若干新的查询方式。
+窗口函数有点像是 SUM()、COUNT() 那样的集合函数，但它并不会将多行查询结果合并为一行，而是将结果放回多行当中。
+也就是说，窗口函数是不需要 GROUP BY 的。
+
+7、JSON
+MySQL 8 大幅改进了对 JSON 的支持，添加了基于路径查询参数从 JSON 字段中抽取数据的 JSON_EXTRACT() 函数，
+以及用于将数据分别组合到 JSON 数组和对象中的 JSON_ARRAYAGG() 和 JSON_OBJECTAGG() 聚合函数。
+
+
+docker exec some-mysql sh -c 'exec mysqldump --all-databases -uroot -p"$MYSQL_ROOT_PASSWORD"' > /some/path/on/your/host/all-databases.sql
+docker exec -i some-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < /some/path/on/your/host/all-databases.sql
+
+

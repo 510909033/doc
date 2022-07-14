@@ -1,3 +1,8 @@
 package doc
 
-
+// See https://github.com/golang/go/issues/8005#issuecomment-190753527 for details.
+// and also: https://stackoverflow.com/questions/52494458/nocopy-minimal-example
+// 结构体添加后， 可以使用go vet ./... 检测
+type noCopy struct{}    //nolint:unused
+func (*noCopy) Lock()   {} //nolint:unused
+func (*noCopy) Unlock() {} //nolint:unused

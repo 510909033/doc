@@ -1,0 +1,41 @@
+
+在 Go 中存在数量极少的与 GC 相关的 API，它们是
+    runtime.GC：手动触发 GC
+    runtime.ReadMemStats：读取内存相关的统计信息，其中包含部分 GC 相关的统计信息
+    debug.FreeOSMemory：手动将内存归还给操作系统
+    debug.ReadGCStats：读取关于 GC 的相关统计信息
+    debug.SetGCPercent：设置 GOGC 调步变量
+    debug.SetMaxHeap（尚未发布[10]）：设置 Go 程序堆的上限值
+
+
+
+https://github.com/golang/go/wiki/CompilerOptimizations
+
+buf := make([]byte, 100)
+a := buf[:10]  // len(a) == 10, cap(a) == 100.
+b := a[:100]  // is valid, since cap(a) == 100.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

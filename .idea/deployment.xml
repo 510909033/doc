@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData">
+  <component name="PublishConfigData" autoUpload="Always" serverName="doc">
     <serverData>
       <paths name="192.168.6.3-go_menu">
         <serverdata>
@@ -48,6 +48,13 @@
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="doc">
+        <serverdata>
+          <mappings>
+            <mapping deploy="./" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
@@ -220,5 +227,6 @@
         </serverdata>
       </paths>
     </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>
