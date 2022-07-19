@@ -1,0 +1,15 @@
+https://zhuanlan.zhihu.com/p/60613088
+
+M指的是Machine，一个M直接关联了一个内核线程。由操作系统管理。
+P指的是”processor”，代表了M所需的上下文环境，也是处理用户级代码逻辑的处理器。它负责衔接M和G的调度上下文，将等待执行的G与M对接。
+G指的是Goroutine，其实本质上也是一种轻量级的线程。包括了调用栈，重要的调度信息，例如channel等。
+
+P的数量由环境变量中的GOMAXPROCS决定，通常来说它是和核心数对应，例如在4Core的服务器上回启动4个线程。
+G会有很多个，每个P会将Goroutine从一个就绪的队列中做Pop操作，为了减小锁的竞争，通常情况下每个P会负责一个队列。
+
+
++++++++++++++++
+GO MO
+https://blog.csdn.net/weixin_52690231/article/details/124711150
+
+https://blog.csdn.net/wsk8520/article/details/116757560

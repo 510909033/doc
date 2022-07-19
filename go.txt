@@ -6,3 +6,42 @@ package doc
 type noCopy struct{}    //nolint:unused
 func (*noCopy) Lock()   {} //nolint:unused
 func (*noCopy) Unlock() {} //nolint:unused
+
+++++++++++++++++
+https://zhuanlan.zhihu.com/p/142208325
+Goroutine context swithcing 的开销一般是系统线程切换的20%左右。（看一篇blog说的，数据不够官方）
+
+gopark 在当前线程中，挂起当前运行的goroutine，在runqueue中找到下一个应当被执行的goroutine并开始运行。
+（挂起goroutine的逻辑基本上就是将当前goroutine的栈指针和计数器等等保存起来）。
+
+goready 会wakeup一个goroutine，将该goroutine放入某一个线程的runqueue当中，于是在未来的某个时刻该goroutine就会被执行。
++++++++++++++
+// +build linux
++++++++++++++
+https://blog.csdn.net/qq_15371293/article/details/122691460
+Go 源码里的这些 //go: 指令
+
+https://www.jianshu.com/p/03085526daea/
+
+//go:noescape
+
+//go:nosplit
+在所有指令中//go:nosplit是最安全的。因为它会在编译时被发现。并且不会影响程序正确性，只会影响性能。
+
+//go:noinlie   禁止内联
+    我们在编译代码时传入--gcflags=-m 参数可以查看编译器的优化策略，传入--gcflags="-m -m"会查看更完整的优化策略！
+    go_noinline/internal/main/main.go
+        go build --gcflags="-m" main.go
+        go build --gcflags="-m -m" main.go
+
+    我们在/src/cmd/compile/internal/gc/inl.go中看到内联优化相关的代码：
+
+    Go在内部维持了一份内联函数的映射关系，会生成一个内联树，我们可以通过-gcflags="-d pctab=pctoinline"参数查看
+    go build -gcflags="-d pctab=pctoinline" main.go
+
+//go:norace
+
+
+
+
+

@@ -1,0 +1,125 @@
+
+在 Go 中存在数量极少的与 GC 相关的 API，它们是
+    runtime.GC：手动触发 GC
+    runtime.ReadMemStats：读取内存相关的统计信息，其中包含部分 GC 相关的统计信息
+    debug.FreeOSMemory：手动将内存归还给操作系统
+    debug.ReadGCStats：读取关于 GC 的相关统计信息
+    debug.SetGCPercent：设置 GOGC 调步变量
+    debug.SetMaxHeap（尚未发布[10]）：设置 Go 程序堆的上限值
+
+
+
+https://github.com/golang/go/wiki/CompilerOptimizations
+
+buf := make([]byte, 100)
+a := buf[:10]  // len(a) == 10, cap(a) == 100.
+b := a[:100]  // is valid, since cap(a) == 100.
+
+---------------------
+https://zhuanlan.zhihu.com/p/478558238
+Go运行时metric指标详解
+
+下面对各个指标进行深入解析：
+Alloc
+对象的分配字节数 = 已分配对象的字节数 - GC已释放的对象的字节数
+
+TotalAlloc
+对象的分配数量 = 已分配对象的数量 - GC已释放的对象的数量
+
+Sys
+运行时保留的虚拟内存，这些内存含义比较丰富，堆、栈和其他内部结构的内存
+
+nlookup  (已废弃！)
+
+Mallocs
+活着的对象数量（Mallocs - Frees），和alloc不同的是，包含了微小对象。
+
+Frees
+释放的对象数量
+
+HeapAlloc
+堆内存分配的对象的字节数，同Alloc
+
+HeapSys
+向系统申请的虚拟内存大小
+
+HeapIdle
+向操作系统申请但是未分配或者回收了的堆内存 ， =HeapSys - HeapInuse
+
+HeapInuse
+被堆使用的内存，HeapInuse - HeapAlloc 表示这些内存还没有被分配对象。
+
+HeapReleased
+HeapIdle 中已经被释放给操作系统的内存。
+
+HeapObjects
+已分配的活着的堆对象 = Mallocs - Frees
+
+StackInuse
+协程栈本身占据的内存字节数
+
+StackSys
+= StackInuse协程栈字节数 + 系统线程栈字节数
+
+MSpanInuse
+正在使用的的span的字节数
+
+MSpanSys
+操作系统分配的span的字节数，其包含了MSpanInuse 和未被使用的span
+
+mcache_inuse
+正在使用的的mcache的字节数
+
+mcache_sys
+操作系统分配的mcache的字节数，其包含了mcache_inuse 和未被使用的mcache
+
+BuckHashSys
+pprof需要用到的bucket 内存大小
+
+GCSys
+垃圾收集需要用到的元数据所占的内存大小。
+
+OtherSys
+运行时其他特殊对象所占的内存大小。
+
+NextGC
+下一次GC的目标内存大小
+
+PauseTotalNs
+程序累积的垃圾回收stop-the-world时间，即不可用时间。在odin为ms
+
+PauseNs
+最近一次stop-the-world时间，即不可用时间
+
+NumGC
+程序开始后的GC次数，每一次GC加1
+
+NumForcedGC
+用户强制触发的GC数量
+
+GCCPUFraction
+衡量GC花费的CPU时间
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

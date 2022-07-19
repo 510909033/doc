@@ -10,4 +10,7 @@ go tool pprof http://localhost:6060/debug/pprof/mutex
 wget -O trace.out http://localhost:6060/debug/pprof/trace?seconds=5
 go tool trace trace.out
 
+线程数
+http://localhost:8008/debug/pprof/threadcreate?debug=1
+
 浏览器：http://localhost:6060/debug/pprof/

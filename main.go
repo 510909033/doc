@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/510909033/doc/go_nocopy"
 	"log"
 	"reflect"
 	"unsafe"
@@ -11,7 +10,19 @@ func main() {
 	//go_pprof.Open()
 	//go_gc.Open()
 	//a1()
-	go_nocopy.OpenNoCopy()
+	//go_nocopy.OpenNoCopy()
+	a2()
+}
+
+func a2() {
+	a := 1
+	var b interface{}
+	b = a
+	switch b.(type) {
+	case int64:
+
+	}
+	log.Println("over")
 }
 
 func a1() {

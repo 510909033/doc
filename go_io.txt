@@ -1,0 +1,90 @@
+其它：
+https://blog.csdn.net/qq_39486027/article/details/125506284
+
+
+
+https://zhuanlan.zhihu.com/p/142208325
+Golang 填坑日记 （二）｜异步IO
+日记：
+1. go通过切换协程实现了异步io，而不是回调函数，所以看起来像同步的
+2. go的 goroutine-per-connection 设计模式
+        goroutine-per-connection 编程风格
+        用主协程监听Listener
+        每个Conn 使用一个新协程处理
+        结合了多路复用的性能和阻塞模型的简洁
+3. 同一个goroutine的上最好只有一个连接，否则多个不同连接之间会相互堵塞，应为有同步原语
+4. gnet，evio 异步IO？？
+
+
+
+
+Goroutine 是一个轻量级的线程
+基本概念
+
+每个线程到保存着一个runqueue，即所有注册在该线程上的goroutine
+每个goroutine都有自己的stack，且一般情况下是互相隔离的（也就是说不会有cross-goroutine stack read/write） *每个 Goroutine的stack都是可扩展和收缩的，一个goroutine结构体本身一般占用4KB左右
+Stack有跳跃和连续两种类型。跳跃类型好比一个linkedlist，连续类型好比一个vector/arraylist。各有各的优缺点
+
+Goroutine context swithcing 的开销一般是系统线程切换的20%左右。（看一篇blog说的，数据不够官方）
+gopark 在当前线程中，挂起当前运行的goroutine，在runqueue中找到下一个应当被执行的goroutine并开始运行。（挂起goroutine的逻辑基本上就是将当前goroutine的栈指针和计数器等等保存起来）。
+goready 会wakeup一个goroutine，将该goroutine放入某一个线程的runqueue当中，于是在未来的某个时刻该goroutine就会被执行。
+这个部分内容挺多，以后可以再深入的总结一下
+package net 中的异步I/O模型
+在读Go代码如何使用net.go的时候发现，在调用conn.Write(buffer []byte) 接口的时候，调用方基本假定buffer中的数据全部都会被成功写进kernel buffer，除非出现error不然不会有buffer满了只能写入一部分的情况。
+
+于是我本能的以为conn.Write内部就是一个while (没有全部写入)kernel {继续写}的逻辑，那这样不是必然会block整个线程吗？ 带着这样的问题我找到具体实现，如下图：
+
+// Write implements io.Writer.
+func (fd *FD) Write(p []byte) (int, error) {
+    ...
+    var nn int
+    for {
+        max := len(p)
+        if fd.IsStream && max-nn > maxRW {
+            max = nn + maxRW
+        }
+        n, err := syscall.Write(fd.Sysfd, p[nn:max])
+        if n > 0 {
+            nn += n
+        }
+        // 如果全部写入kernel了，返回成功
+        if nn == len(p) {
+            return nn, err
+        }
+        // 重点：还没写完，挂起goroutine等待通知
+        if err == syscall.EAGAIN && fd.pd.pollable() {
+            if err = fd.pd.waitWrite(fd.isFile); err == nil {
+                continue
+            }
+        }
+        if err != nil {
+            return nn, err
+        }
+        if n == 0 {
+            return nn, io.ErrUnexpectedEOF
+        }
+    }
+}
+已经在上面代码中加入了注释。 对于 syscall.EAGAIN，man 2 write 解释如下
+
+[EAGAIN] The file is marked for non-blocking I/O, and no data could be written immediately.
+同时fd.pd.waiteWrite 内部大致的逻辑是会先gopark当前goroutine，直到从kernel获得该文件描述符又可以写入了的通知。
+
+事实上，每当你用标准库package net创建了一个新的连接，该连接都会自动被注册进事件列表。runtime最底层使用的仍然是epoll/select/kqueue等接口。
+
+这样的包装非常有意思，一方面它让API保持同步的语义，但又通过runtime对goroutine的调度使得本来阻塞的操作并不会阻塞真正的系统线程。总的来说系统线程仍然得到了充分利用，而且用户的代码仍然是同步的，不用去处理回调函数。
+
+goroutine-per-connection 设计模式的限制
+通过上面描述的这些runtime的机制，我们可以看出Golang是推崇用户使用同步的语义的。不然上面的机制就得不到发挥。基于net package的这种goroutine上的同步语义事实上导致的另一个问题就是必须使用goroutine-per-connection的设计。
+
+我们来假设一下，假如我们在Goroutine上模仿C++/java那样实现线程上TCP连接的多路复用（基于package net，假如行得通的话），那么在同一个goroutine的上的不同连接就会互相阻塞对方：
+
+TCP有基于WindowUpdate的流控制，假如一个TCP服务端处理消息的速度变慢（可能各种原因）导致不能及时消费服务端的RECVBuffer，那么客户端就无法顺利的发送SENDBuffer中的数据，userspace代码也将无法继续写入。这时，package net中提供的同步write语义反而会成为负担，因为无论runtime如何调度goroutine，这个被阻塞的连接必然会导致所有multiplex在该goroutine上的连接阻塞。
+所以事实上goroutine-per-connection即是Golang官方所推崇的模式。(事实上是两个goroutine，一个负责写，一个负责读)
+
+大多数情况下，这种设计模式也不会有什么问题，特别是对于客户端来说。但对于中心化的服务器，假设单实例并发连接数超过1M（不算过分），单单处理这些连接就需要 2 * 1M = 2M 个 goroutine，总计大约 4KB * 2M = 8GB 的内存，完全还没有算这些连接上的各种buffer，状态机，还有业务逻辑所需要的开销。所以内存的baseline一下就会被拉高很多。
+
+其实不仅仅是内存，大量goroutine对于CPU的开销也会提高。过多的goroutine必然会导致频繁的Goroutine上下文切换。即使goroutine是一个轻量级的线程，这么多的goroutine上下文切换的开销仍然是非常大的。
+
+解决方案
+这种普遍的问题肯定是有一堆现成轮子的，果不其然，简单搜索了一下gnet，evio都是可选的方案。他们的思路很简单，说白了模仿libevent/Java netty，不依赖package net，自行调用epoll/select/kqueue 来实现事件的EventLoop。另外，网络线程/Go程和业务线程/Go程的分离也是很必要的。
